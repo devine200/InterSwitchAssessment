@@ -148,30 +148,52 @@ export class EventListener {
 
   /**
    * Sync historical events from a specific block number
+   * Alchemy free tier limits to 10 block range, so we sync in chunks
    */
   async syncHistoricalEvents(fromBlock = 0) {
     console.log(`Syncing historical events from block ${fromBlock}`);
     
     try {
-      // Get AssetRegistered events
-      const registeredFilter = this.contract.filters.AssetRegistered();
-      const registeredEvents = await this.contract.queryFilter(registeredFilter, fromBlock);
+      const currentBlock = await this.provider.getBlockNumber();
+      const BLOCK_CHUNK_SIZE = 10; // Alchemy free tier limit
+      let totalRegistered = 0;
+      let totalTransferred = 0;
+      
+      // Sync in chunks of 10 blocks
+      for (let startBlock = fromBlock; startBlock <= currentBlock; startBlock += BLOCK_CHUNK_SIZE) {
+        const endBlock = Math.min(startBlock + BLOCK_CHUNK_SIZE - 1, currentBlock);
+        console.log(`Syncing blocks ${startBlock} to ${endBlock}...`);
+        
+        try {
+          // Get AssetRegistered events for this chunk
+          const registeredFilter = this.contract.filters.AssetRegistered();
+          const registeredEvents = await this.contract.queryFilter(registeredFilter, startBlock, endBlock);
 
-      for (const event of registeredEvents) {
-        const [id, owner, description, timestamp] = event.args;
-        await this.handleAssetRegistered(id, owner, description, timestamp, event);
+          for (const event of registeredEvents) {
+            const [id, owner, description, timestamp] = event.args;
+            await this.handleAssetRegistered(id, owner, description, timestamp, event);
+            totalRegistered++;
+          }
+
+          // Get AssetTransferred events for this chunk
+          const transferredFilter = this.contract.filters.AssetTransferred();
+          const transferredEvents = await this.contract.queryFilter(transferredFilter, startBlock, endBlock);
+
+          for (const event of transferredEvents) {
+            const [id, newOwner] = event.args;
+            await this.handleAssetTransferred(id, newOwner, event);
+            totalTransferred++;
+          }
+          
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (chunkError) {
+          console.error(`Error syncing blocks ${startBlock}-${endBlock}:`, chunkError.message);
+          // Continue with next chunk
+        }
       }
 
-      // Get AssetTransferred events
-      const transferredFilter = this.contract.filters.AssetTransferred();
-      const transferredEvents = await this.contract.queryFilter(transferredFilter, fromBlock);
-
-      for (const event of transferredEvents) {
-        const [id, newOwner] = event.args;
-        await this.handleAssetTransferred(id, newOwner, event);
-      }
-
-      console.log(`Historical sync completed. Processed ${registeredEvents.length} registrations and ${transferredEvents.length} transfers`);
+      console.log(`Historical sync completed. Processed ${totalRegistered} registrations and ${totalTransferred} transfers`);
     } catch (error) {
       console.error('Error syncing historical events:', error);
       throw error;

@@ -1,5 +1,11 @@
 // Contract ABI for AssetRegistry
+// Deployed to Sepolia at: 0x4de8A863f6FCa76498D26BE85Ff1323F5E01A6c2
 export const AssetRegistryABI = [
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
   {
     "anonymous": false,
     "inputs": [

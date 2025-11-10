@@ -37,9 +37,11 @@ cp .env.example .env
 ```env
 PORT=3000
 RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY
-CONTRACT_ADDRESS=0xYourDeployedContractAddress
-SYNC_FROM_BLOCK=0  # Optional: block number to start syncing from
+CONTRACT_ADDRESS=0x4de8A863f6FCa76498D26BE85Ff1323F5E01A6c2
+SYNC_FROM_BLOCK=9600520  # Block number to start syncing from (deployment block)
 ```
+
+**Note:** The contract is deployed to Sepolia testnet. See `../asset-registry-contract/DEPLOYMENT_INFO.md` for deployment details.
 
 ## Usage
 
